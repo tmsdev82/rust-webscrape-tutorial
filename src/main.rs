@@ -24,7 +24,7 @@ async fn main() {
             _ => "no url found",
         };
 
-        println!("Title: {}", inner);
+        println!("Title: {}", &inner);
         println!("Link: {}", &href);
     }
 }
