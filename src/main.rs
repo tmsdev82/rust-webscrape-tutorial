@@ -1,4 +1,5 @@
 use reqwest::StatusCode;
+use scraper::{ElementRef, Html, Selector};
 
 mod utils;
 
@@ -13,5 +14,17 @@ async fn main() {
         _ => panic!("Something went wrong"),
     };
 
-    println!("HTML: {}", raw_html);
+    let document = Html::parse_document(&raw_html);
+    let article_selector = Selector::parse("a.js-content-viewer").unwrap();
+
+    for element in document.select(&article_selector) {
+        let inner = element.inner_html().to_string();
+        let href = match element.value().attr("href") {
+            Some(target_url) => target_url,
+            _ => "no url found",
+        };
+
+        println!("Title: {}", inner);
+        println!("Link: {}", &href);
+    }
 }
