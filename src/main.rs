@@ -1,5 +1,6 @@
+use regex::Regex;
 use reqwest::StatusCode;
-use scraper::{ElementRef, Html, Selector};
+use scraper::{Html, Selector};
 
 mod utils;
 
@@ -18,6 +19,8 @@ async fn main() {
     let article_selector = Selector::parse("a.js-content-viewer").unwrap();
     let h2select = Selector::parse("h2").unwrap();
     let h3select = Selector::parse("h3").unwrap();
+    let get_text_re = Regex::new(r"->.*<").unwrap();
+    let find_replace_re = Regex::new(r"[-><]").unwrap();
 
     for element in document.select(&article_selector) {
         let inner = element.inner_html().to_string();
@@ -47,7 +50,15 @@ async fn main() {
             _ => {}
         }
 
-        println!("Title: {}", &inner);
-        println!("Link: {}", &href);
+        match get_text_re.captures_iter(&inner).next() {
+            Some(cap) => {
+                let replaced = find_replace_re.replace_all(&cap[0], "");
+                println!("Regex: {}", &replaced);
+                println!("Link: {}", &href);
+            }
+            _ => {
+                println!("Nothing found");
+            }
+        }
     }
 }
