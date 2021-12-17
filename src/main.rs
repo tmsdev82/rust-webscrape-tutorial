@@ -1,19 +1,25 @@
+use chrono;
 use regex::Regex;
 use reqwest::StatusCode;
 use scraper::{Html, Selector};
+use std::fs::File;
+use std::io::Write;
 
 mod utils;
 
 #[tokio::main]
 async fn main() {
     let client = utils::get_client();
-    let url = "https://finance.yahoo.com";
+    let domain_name = "finance.yahoo.com";
+    let url = format!("https://{}", domain_name);
     let result = client.get(url).send().await.unwrap();
 
     let raw_html = match result.status() {
         StatusCode::OK => result.text().await.unwrap(),
         _ => panic!("Something went wrong"),
     };
+
+    save_raw_html(&raw_html, domain_name);
 
     let document = Html::parse_document(&raw_html);
     let article_selector = Selector::parse("a.js-content-viewer").unwrap();
@@ -61,4 +67,11 @@ async fn main() {
             }
         }
     }
+}
+
+fn save_raw_html(raw_html: &str, domain_name: &str) {
+    let dt = chrono::Local::now();
+    let filename = format!("{}_{}.html", domain_name, dt.format("%Y-%m-%d_%H.%M.%S"));
+    let mut writer = File::create(&filename).unwrap();
+    write!(&mut writer, "{}", &raw_html).unwrap();
 }
