@@ -5,6 +5,7 @@ use scraper::{Html, Selector};
 use std::fs::File;
 use std::io::Write;
 
+mod models;
 mod utils;
 
 #[tokio::main]
@@ -28,6 +29,7 @@ async fn main() {
     let get_text_re = Regex::new(r"->.*<").unwrap();
     let find_replace_re = Regex::new(r"[-><]").unwrap();
 
+    let mut article_list: Vec<models::ArticleData> = Vec::new();
     for element in document.select(&article_selector) {
         let inner = element.inner_html().to_string();
         let mut h2el = element.select(&h2select);
@@ -40,8 +42,15 @@ async fn main() {
 
         match h2el.next() {
             Some(elref) => {
-                println!("H2: {}", &elref.inner_html().to_string());
+                let title = elref.inner_html().to_string();
+                println!("H2: {}", &title);
                 println!("Link: {}", &href);
+
+                article_list.push(models::ArticleData {
+                    article_title: title,
+                    url_link: href.to_string(),
+                    domain_name: domain_name.to_string(),
+                });
                 continue;
             }
             _ => {}
@@ -49,8 +58,15 @@ async fn main() {
 
         match h3el.next() {
             Some(elref) => {
-                println!("H3: {}", &elref.inner_html().to_string());
+                let title = elref.inner_html().to_string();
+                println!("H3: {}", &title);
                 println!("Link: {}", &href);
+
+                article_list.push(models::ArticleData {
+                    article_title: title,
+                    url_link: href.to_string(),
+                    domain_name: domain_name.to_string(),
+                });
                 continue;
             }
             _ => {}
@@ -61,12 +77,21 @@ async fn main() {
                 let replaced = find_replace_re.replace_all(&cap[0], "");
                 println!("Regex: {}", &replaced);
                 println!("Link: {}", &href);
+
+                article_list.push(models::ArticleData {
+                    article_title: replaced.to_string(),
+                    url_link: href.to_string(),
+                    domain_name: domain_name.to_string(),
+                });
             }
             _ => {
                 println!("Nothing found");
             }
         }
     }
+
+    println!("Number of articles titles scraped: {}", article_list.len());
+    save_article_list(&article_list, &domain_name);
 }
 
 fn save_raw_html(raw_html: &str, domain_name: &str) {
@@ -74,4 +99,16 @@ fn save_raw_html(raw_html: &str, domain_name: &str) {
     let filename = format!("{}_{}.html", domain_name, dt.format("%Y-%m-%d_%H.%M.%S"));
     let mut writer = File::create(&filename).unwrap();
     write!(&mut writer, "{}", &raw_html).unwrap();
+}
+
+fn save_article_list(article_list: &Vec<models::ArticleData>, domain_name: &str) {
+    let dt = chrono::Local::now();
+    let filename = format!("{}_{}.json", domain_name, dt.format("%Y-%m-%d_%H.%M.%S"));
+    let mut writer = File::create(&filename).unwrap();
+    write!(
+        &mut writer,
+        "{}",
+        &serde_json::to_string(&article_list).unwrap()
+    )
+    .unwrap();
 }
